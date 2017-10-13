@@ -169,6 +169,7 @@ void libertarMPlib() {
 ---------------------------------------------------------------------*/
 
 int receberMensagem(int tarefaOrig, int tarefaDest, void *buffer, int tamanho) {
+
   Channel_t      *channel;
   Message_t      *mess;
   int            copysize;

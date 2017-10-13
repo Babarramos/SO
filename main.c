@@ -117,16 +117,14 @@ int main (int argc, char** argv) {
   dm2dSetColumnTo (matrix, N+1, tDir);
 
   argsSimular_t * slave_args = createThreads(trab, iteracoes, N/trab, matrix, tSup, tInf, tEsq, tDir);
+  aux(slave_args);
 
   //result = simul(matrix, N+2, N+2, iteracoes);
-  if (result == NULL) {
-    printf("\nErro na simulacao.\n\n");
-    return -1;
-  }
-
-  //dm2dPrint(result);
 
   sortPrints(slave_args);
+  killThreads(trab, slave_args);
+  //dm2dPrint(result);
+
 
   return 0;
 }

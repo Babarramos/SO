@@ -25,11 +25,11 @@
 #define BUFFSZ 256
 
 typedef struct {
+
+  int iteracoes;
   int id;
-  int numtrad;
-  int N;
-  int k;
-  int niter;
+  double** matrix;
+  int idx;
 
 } argsSimular_t;
 
@@ -57,15 +57,16 @@ void *slaveThread(void *a) {
 
    char send_buff[BUFFSZ];
    char receive_buff[BUFFSZ];
-   argsSimular_t *arg   = (argsSimular_t *) a;
-   int myid = arg->id;
+   argsSimular_t *thread   = (argsSimular_t *) a;
+   int myid = thread->id;
    int i,j;
 
    for (i = 0; i < STRSZ; i++)
      send_buff[i] = 96+myid;
    send_buff[10] = 0;
 
-   for (j = 0; j<arg->n; j++) {
+   for (j = 0; j < thread->iteracoes; j++) {
+
      printf ("task=%d vai enviar %s para task 0\n", myid, send_buff);
      enviarMensagem (myid, 0, send_buff, strlen(send_buff)+1);
 
@@ -82,20 +83,30 @@ void *slaveThread(void *a) {
 |              para cada um dos filhos recebe uma mensagem e envia
                uma resposta n vezes
 ---------------------------------------------------------------------*/
-int k = N/trab;
-argsSimular_t* createThreads(int numTarefas) {
+argsSimular_t* createThreads(int numTarefas, int it, int k, DoubleMatrix2D *matrix) {
 
   argsSimular_t* slaves = (argsSimular_t*)malloc(numTarefas*sizeof(argsSimular_t));
   /* create slaves */
+  int h = 0;
   for (int i = 0; i < numTarefas; i++) {
 
-    slaves[i].id = i + 1;
-    slaves[i].numtrad  = numTarefas;
-    slaves[i].N = N;
-    slaves[i].k = k;
-    slaves[i].niter = iteracoes;
+    slaves[i].matrix = malloc(sizeof(double*) * k);//matrix[h:h + k];
+    for(int a = 0; a < k; a++)
+      slaves[i].matrix[a] = malloc(k * numTarefas * sizeof(double));
 
-    pthread_create(&slaves[i], NULL, slaveThread, &slaves[i]);
+    int line = 0;
+    for(int a = h; a < h + k; a++) {
+      for(int col = 0; col < numTarefas * k; col++)
+        slaves[i].matrix[line][col] = dm2dGetEntry(matrix, a, col);
+      line++;
+    }
+
+    h += k;
+
+    slaves[i].idx = i;
+    slaves[i].iteracoes = it;
+    slaves[i].id = pthread_create(&slaves[i], NULL, slaveThread, &slaves[i]);
+
   }
   return slaves;
 
@@ -143,6 +154,8 @@ argsSimular_t* createThreads(int numTarefas) {
     int i;
     for (i = 0; i < numTarefas; i++) {
       if (pthread_join(slave_args[i].id, NULL)) {
+
+        free(slave_args[i].matrix);
         fprintf(stderr, "\nErro ao esperar por um escravo.\n");
         return -1;
       }

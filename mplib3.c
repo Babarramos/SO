@@ -1,9 +1,3 @@
-
-/*
-// Biblioteca de troca de mensagens, versao 3
-// Sistemas Operativos, DEI/IST/ULisboa 2017-18
-*/
-
 #include "mplib3.h"
 #include "leQueue.h"
 

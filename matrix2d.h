@@ -10,6 +10,7 @@ typedef struct int_matrix_2d {
   int     n_l;
   int     n_c;
   double *data;
+
 } DoubleMatrix2D;
 
 DoubleMatrix2D* dm2dNew(int lines, int columns);

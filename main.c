@@ -97,7 +97,6 @@ int main (int argc, char** argv) {
   int csz = parse_integer_or_exit(argv[8], "csz");
 
   DoubleMatrix2D *matrix, *result;
-  argsSimular_t * slave_args = createThreads(trab);
 
   fprintf(stderr, "\nArgumentos:\n"
 	" N=%d tEsq=%.1f tSup=%.1f tDir=%.1f tInf=%.1f iteracoes=%d tarefas=%d csz=%d\n",
@@ -110,6 +109,7 @@ int main (int argc, char** argv) {
   }
 
   matrix = dm2dNew(N+2, N+2);
+  argsSimular_t * slave_args = createThreads(trab, iteracoes, N/trab, matrix);
 
   if (matrix == NULL) {
     fprintf(stderr, "\nErro: Nao foi possivel alocar memoria para as matrizes.\n\n");

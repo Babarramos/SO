@@ -53,6 +53,38 @@ typedef struct {
 |              faz isto n vezes
 ---------------------------------------------------------------------*/
 
+double** simul(argsSimular_t *thread) {
+
+  double **m, **aux, **tmp;
+  int iter, i, j;
+  double value;
+
+  m = thread->matrix;
+  int linhas = sizeof(m)/sizeof(double);
+  int colunas = sizeof(m[0])/sizeof(double);
+
+  if(linhas < 2 || colunas < 2)
+    return NULL;
+
+  int numIteracoes = thread->iteracoes;
+
+  for (iter = 0; iter < numIteracoes; iter++) {
+
+    for (i = 1; i < linhas - 1; i++)
+      for (j = 1; j < colunas - 1; j++) {
+        value = ( m[i - 1][j] + m[i + 1][j] + m[i][j - 1] + m[i][j + 1] ) / 4.0;
+          aux[i][j] = value;
+      }
+
+    tmp = aux;
+    aux = m;
+    m = tmp;
+  }
+
+  return m;
+}
+
+
 void *slaveThread(void *a) {
 
    char send_buff[BUFFSZ];
@@ -66,14 +98,27 @@ void *slaveThread(void *a) {
    send_buff[10] = 0;
 
    for (j = 0; j < thread->iteracoes; j++) {
+    if(myid % 2 == 0) {
 
-     printf ("task=%d vai enviar %s para task 0\n", myid, send_buff);
-     enviarMensagem (myid, 0, send_buff, strlen(send_buff)+1);
+      receberMensagem (0, myid, receive_buff, BUFFSZ);
+      printf ("task=%d recebeu %s da task 0\n", myid, receive_buff);
 
+      printf ("task=%d vai enviar %s para task 0\n", myid, send_buff);
+      enviarMensagem (myid, 0, send_buff, strlen(send_buff)+1);
 
-     receberMensagem (0, myid, receive_buff, BUFFSZ);
-     printf ("task=%d recebeu %s da task 0\n", myid, receive_buff);
+    }
+    else {
+
+      printf ("task=%d vai enviar %s para task 0\n", myid, send_buff);
+      enviarMensagem (myid, 0, send_buff, strlen(send_buff)+1);
+
+      printf ("task=%d recebeu %s da task 0\n", myid, receive_buff);
+      receberMensagem (0, myid, receive_buff, BUFFSZ);
+
+    }
    }
+
+   thread->matrix = simul(thread);
    return 0;
 }
 
@@ -83,24 +128,36 @@ void *slaveThread(void *a) {
 |              para cada um dos filhos recebe uma mensagem e envia
                uma resposta n vezes
 ---------------------------------------------------------------------*/
-argsSimular_t* createThreads(int numTarefas, int it, int k, DoubleMatrix2D *matrix) {
+argsSimular_t* createThreads(int numTarefas, int it, int k, DoubleMatrix2D *matrix, int t, int b, int e, int d) {
 
-  argsSimular_t* slaves = (argsSimular_t*)malloc(numTarefas*sizeof(argsSimular_t));
+  argsSimular_t* slaves = (argsSimular_t*) malloc(numTarefas * sizeof(argsSimular_t));
   /* create slaves */
   int h = 0;
   for (int i = 0; i < numTarefas; i++) {
 
-    slaves[i].matrix = malloc(sizeof(double*) * k);//matrix[h:h + k];
-    for(int a = 0; a < k; a++)
-      slaves[i].matrix[a] = malloc(k * numTarefas * sizeof(double));
+    slaves[i].matrix = malloc(sizeof(double*) * (k + 2));
+    for(int a = 0; a < k + 2; a++)
+      slaves[i].matrix[a] = malloc((2 + k) * numTarefas * sizeof(double));
 
     int line = 0;
-    for(int a = h; a < h + k; a++) {
-      for(int col = 0; col < numTarefas * k; col++)
-        slaves[i].matrix[line][col] = dm2dGetEntry(matrix, a, col);
+    for(int a = h; a < h + k + 1; a++) {
+
+      slaves[i].matrix[line][0] = (double) e;
+      slaves[i].matrix[line][-1] = (double) d;
+
+        for(int col = 1; col < numTarefas * k; col++) {
+
+          if(h == 0 && line == 0 && line <= numTarefas * k)
+            slaves[i].matrix[line][col] = (double) t;
+
+          else if(line > numTarefas * k)
+            slaves[i].matrix[-1][col] = (double) b;
+
+          else
+            slaves[i].matrix[line][col] = dm2dGetEntry(matrix, a, col);
+      }
       line++;
     }
-
     h += k;
 
     slaves[i].idx = i;
@@ -111,44 +168,7 @@ argsSimular_t* createThreads(int numTarefas, int it, int k, DoubleMatrix2D *matr
   return slaves;
 
 }
-
-
-/*int main (int argc, char** argv) {
-  int numTarefas;
-  int i, j;
-  char buff[BUFFSZ];
-
-  pthread_t *slaves;
-  printf("PNI\n" );
-  if (argc < 2) {
-    printf("client_server_1 n_tarefas\n");
-    return 1;
-  }
-
-  numTarefas = atoi(argv[1]);
-
-  if ((numTarefas<1) || (numTarefas>26)){
-    printf ("n_tarefas deve ser entre 1 e 26\n");
-    return 1;
-  }
-
-
-  if (inicializarMPlib(1, numTarefas + 1) == -1) {
-
-    printf("Erro ao inicializar MPLib.\n");
-    return 1;
-  }
-
-  for (i=0; i<numTarefas; i++) {
-    for (j=0; j<numTarefas; j++) {
-      receberMensagem (i+1, 0, buff, BUFFSZ);
-      strupr (buff);
-      enviarMensagem (0, i+1, buff, strlen(buff)+1);
-    }
-  }
-
   /* Esperar que os Escravos Terminem */
-
 
   void killThreads(int numTarefas, argsSimular_t *slave_args) {
     int i;

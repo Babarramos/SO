@@ -15,34 +15,6 @@
 ---------------------------------------------------------------------*/
 
 
-DoubleMatrix2D *simul(DoubleMatrix2D *matrix, int linhas, int colunas, int numIteracoes) {
-  DoubleMatrix2D *m, *aux, *tmp;
-  int iter, i, j;
-  double value;
-
-
-  if(linhas < 2 || colunas < 2)
-    return NULL;
-
-  m = matrix;
-
-  for (iter = 0; iter < numIteracoes; iter++) {
-
-    for (i = 1; i < linhas - 1; i++)
-      for (j = 1; j < colunas - 1; j++) {
-        value = ( dm2dGetEntry(m, i-1, j) + dm2dGetEntry(m, i+1, j) +
-		            dm2dGetEntry(m, i, j-1) + dm2dGetEntry(m, i, j+1) ) / 4.0;
-        dm2dSetEntry(aux, i, j, value);
-      }
-
-    tmp = aux;
-    aux = m;
-    m = tmp;
-  }
-
-  return m;
-}
-
 /*--------------------------------------------------------------------
 | Function: parse_integer_or_exit
 ---------------------------------------------------------------------*/
@@ -73,6 +45,24 @@ double parse_double_or_exit(char const *str, char const *name)
   return value;
 }
 
+void sortPrints(argsSimular_t *list) {
+  int i, j;
+
+  printf ("\n");
+  for(int n = 0; n < sizeof(list)/sizeof(argsSimular_t*); n++) {
+
+    double** matrix = list[n].matrix;
+    for (i = 0; i< sizeof(matrix)/sizeof(double); i++) {
+      if(n > 0 && i < 1)
+        continue;
+
+      for (j=0; j < sizeof(matrix[i])/sizeof(double); j++)
+        printf(" %8.4f", matrix[i, j]);
+      printf ("\n");
+    }
+  }
+}
+
 
 /*--------------------------------------------------------------------
 | Function: main
@@ -96,7 +86,8 @@ int main (int argc, char** argv) {
   int trab = parse_integer_or_exit(argv[7], "tarefas");
   int csz = parse_integer_or_exit(argv[8], "csz");
 
-  DoubleMatrix2D *matrix, *result;
+  DoubleMatrix2D *matrix;
+  double **result;
 
   fprintf(stderr, "\nArgumentos:\n"
 	" N=%d tEsq=%.1f tSup=%.1f tDir=%.1f tInf=%.1f iteracoes=%d tarefas=%d csz=%d\n",
@@ -109,7 +100,6 @@ int main (int argc, char** argv) {
   }
 
   matrix = dm2dNew(N+2, N+2);
-  argsSimular_t * slave_args = createThreads(trab, iteracoes, N/trab, matrix);
 
   if (matrix == NULL) {
     fprintf(stderr, "\nErro: Nao foi possivel alocar memoria para as matrizes.\n\n");
@@ -126,15 +116,17 @@ int main (int argc, char** argv) {
   dm2dSetColumnTo (matrix, 0, tEsq);
   dm2dSetColumnTo (matrix, N+1, tDir);
 
-  result = simul(matrix, N+2, N+2, iteracoes);
+  argsSimular_t * slave_args = createThreads(trab, iteracoes, N/trab, matrix, tSup, tInf, tEsq, tDir);
+
+  //result = simul(matrix, N+2, N+2, iteracoes);
   if (result == NULL) {
     printf("\nErro na simulacao.\n\n");
     return -1;
   }
 
-  dm2dPrint(result);
+  //dm2dPrint(result);
 
-  dm2dFree(matrix);
+  sortPrints(slave_args);
 
   return 0;
 }

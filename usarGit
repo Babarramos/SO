@@ -1,0 +1,8 @@
+git add --all
+git commit -m "MENSAGEM PARA ENVIAR"
+git push
+
+
+
+
+para sacar: git pull

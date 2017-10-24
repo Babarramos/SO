@@ -1,5 +1,5 @@
 heatSim: main.o matrix2d.o mplib3.o leQueue.o
-	gcc  -pthread -o heatSim main.o matrix2d.o mplib3.o leQueue.o
+	gcc  -pthread -o heatSim *.o
 
 main.o: main.c matrix2d.h
 	gcc -g -Wall -pedantic -c main.c

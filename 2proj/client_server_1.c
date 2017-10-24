@@ -1,14 +1,4 @@
 
-/*--------------------------------------------------------------------
-| Disclamer: Este código foi feito um pouco à pressa. Não
-|            está perfeito mas ilustra a utilização da mplib
-| v2: alguns warnings corrigidos.
----------------------------------------------------------------------*/
-
-/*--------------------------------------------------------------------
-| Includes
----------------------------------------------------------------------*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,6 +6,10 @@
 #include <ctype.h>
 
 #include "mplib3.h"
+
+/*--------------------------------------------------------------------
+| Define
+---------------------------------------------------------------------*/
 
 #define STRSZ 10
 #define BUFFSZ 256
@@ -38,6 +32,7 @@ double** simul(argsSimular_t *thread) {
   m = thread->matrix;
   int linhas = sizeof(m)/sizeof(double);
   int colunas = sizeof(m[0])/sizeof(double);
+
   if(linhas < 2 || colunas < 2)
     return NULL;
 
@@ -59,6 +54,11 @@ double** simul(argsSimular_t *thread) {
   return m;
 }
 
+/*--------------------------------------------------------------------
+| Function: slaveThread
+| Description: envia numa mensagem para a thread 0 e espera uma resposta
+|              faz isto n vezes
+---------------------------------------------------------------------*/
 void *slaveThread(void *a) {
 
    char send_buff[BUFFSZ];
@@ -91,12 +91,8 @@ void *slaveThread(void *a) {
 
     }
    }
-   thread->matrix = simul(thread);
 
-   if (thread->matrix == NULL) {
-     printf("\nErro na simulacao.\n\n");
-     exit(-1);
-   }
+   thread->matrix = simul(thread);
    return 0;
 }
 
@@ -121,18 +117,18 @@ argsSimular_t* createThreads(int numTarefas, int it, int k, DoubleMatrix2D *matr
     for(int a = h; a < h + k + 1; a++) {
 
       slaves[i].matrix[line][0] = (double) e;
-      slaves[i].matrix[line][k * numTarefas + 1] = (double) d;
+      slaves[i].matrix[line][-1] = (double) d;
 
-      for(int col = 1; col < numTarefas * k + 1; col++) {
+        for(int col = 1; col < numTarefas * k; col++) {
 
-        if(h == 0 && line == 0 && line <= numTarefas * k)
-          slaves[i].matrix[line][col] = (double) t;
+          if(h == 0 && line == 0 && line <= numTarefas * k)
+            slaves[i].matrix[line][col] = (double) t;
 
-        else if(line > numTarefas * k)
-          slaves[i].matrix[k * numTarefas + 1][col] = (double) b;
+          else if(line > numTarefas * k)
+            slaves[i].matrix[-1][col] = (double) b;
 
-        else
-          slaves[i].matrix[line][col] = dm2dGetEntry(matrix, a, col);
+          else
+            slaves[i].matrix[line][col] = dm2dGetEntry(matrix, a, col);
       }
       line++;
     }
@@ -144,20 +140,19 @@ argsSimular_t* createThreads(int numTarefas, int it, int k, DoubleMatrix2D *matr
 
   }
   return slaves;
-}
 
+}
   /* Esperar que os Escravos Terminem */
+
   void killThreads(int numTarefas, argsSimular_t *slave_args) {
     int i;
     for (i = 0; i < numTarefas; i++) {
       if (pthread_join(slave_args[i].id, NULL)) {
 
+        free(slave_args[i].matrix);
         fprintf(stderr, "\nErro ao esperar por um escravo.\n");
         return -1;
       }
-      free(slave_args[i].matrix);
   }
-
-  free(slave_args);
   return 0;
 }
